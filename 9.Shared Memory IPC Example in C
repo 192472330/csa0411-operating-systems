@@ -1,0 +1,38 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <string.h>
+#include <unistd.h>
+
+int main() {
+    // Generate a unique key for shared memory
+    key_t key = ftok("shmfile", 65);
+
+    // Create shared memory segment of size 1024 bytes
+    int shmid = shmget(key, 1024, 0666|IPC_CREAT);
+    if (shmid == -1) {
+        perror("shmget failed");
+        exit(1);
+    }
+
+    // Attach the shared memory segment to our process's address space
+    char *str = (char*) shmat(shmid, (void*)0, 0);
+    if (str == (char*)-1) {
+        perror("shmat failed");
+        exit(1);
+    }
+
+    printf("Write data to shared memory: ");
+    fgets(str, 1024, stdin);  // Write input to shared memory
+
+    printf("Data written to shared memory: %s\n", str);
+
+    // Detach the shared memory
+    shmdt(str);
+
+    // Optionally, remove the shared memory segment
+    // shmctl(shmid, IPC_RMID, NULL);
+
+    return 0;
+}

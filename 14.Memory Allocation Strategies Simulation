@@ -1,0 +1,19 @@
+#include <stdio.h>
+
+int main() {
+    int mem[100] = {0}; // memory blocks
+    int req[5] = {10, 20, 5, 30, 25};
+    int i, j;
+
+    printf("First Fit Allocation:\n");
+    for(i=0;i<5;i++){
+        for(j=0;j<100;j++){
+            if(mem[j]==0 && j+req[i]<=100){
+                for(int k=0;k<req[i];k++) mem[j+k]=1;
+                printf("Process %d allocated starting at block %d\n", i+1, j);
+                break;
+            }
+        }
+    }
+    return 0;
+}

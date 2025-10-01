@@ -1,0 +1,69 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+typedef struct {
+    int id;
+    char name[40];
+    int age;
+    float salary;
+} Employee;
+
+int main() {
+    FILE *fp;
+    Employee e;
+    int choice, rec;
+
+    do {
+        printf("\n--- Employee Random Access File Menu ---\n");
+        printf("1. Add Employee\n");
+        printf("2. Display All Employees\n");
+        printf("3. Read Employee by Record Number\n");
+        printf("4. Exit\n");
+        printf("Enter your choice: ");
+        scanf("%d", &choice);
+
+        switch(choice) {
+            case 1:
+                fp = fopen("employee.dat", "ab");  // append in binary
+                if (!fp) { perror("File open error"); exit(1); }
+                printf("Enter ID, Name, Age, Salary: ");
+                scanf("%d %s %d %f", &e.id, e.name, &e.age, &e.salary);
+                fwrite(&e, sizeof(Employee), 1, fp);
+                fclose(fp);
+                break;
+
+            case 2:
+                fp = fopen("employee.dat", "rb");
+                if (!fp) { perror("File open error"); break; }
+                printf("\nID\tName\tAge\tSalary\n");
+                while(fread(&e, sizeof(Employee), 1, fp))
+                    printf("%d\t%s\t%d\t%.2f\n", e.id, e.name, e.age, e.salary);
+                fclose(fp);
+                break;
+
+            case 3:
+                fp = fopen("employee.dat", "rb");
+                if (!fp) { perror("File open error"); break; }
+                printf("Enter record number to read: ");
+                scanf("%d", &rec);
+                fseek(fp, (rec-1)*sizeof(Employee), SEEK_SET);
+                if(fread(&e, sizeof(Employee), 1, fp))
+                    printf("\nID: %d\nName: %s\nAge: %d\nSalary: %.2f\n",
+                           e.id, e.name, e.age, e.salary);
+                else
+                    printf("Record not found!\n");
+                fclose(fp);
+                break;
+
+            case 4:
+                printf("Exiting...\n");
+                break;
+
+            default:
+                printf("Invalid choice!\n");
+        }
+    } while(choice != 4);
+
+    return 0;
+}

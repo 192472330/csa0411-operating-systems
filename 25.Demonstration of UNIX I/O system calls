@@ -1,0 +1,72 @@
+/* io_syscalls_demo.c
+   Demonstrates fcntl (get/set flags), lseek, stat, opendir/readdir usage.
+   Compile: gcc -o io_syscalls_demo io_syscalls_demo.c
+*/
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <dirent.h>
+#include <string.h>
+#include <errno.h>
+
+int main(int argc, char *argv[]) {
+    if (argc < 3) {
+        fprintf(stderr, "Usage: %s <file-to-demo> <directory-to-list>\n", argv[0]);
+        return 1;
+    }
+
+    const char *fname = argv[1];
+    const char *dname = argv[2];
+
+    /* 1) open file and show fcntl flags */
+    int fd = open(fname, O_RDWR | O_CREAT, 0644);
+    if (fd == -1) { perror("open"); return 1; }
+
+    int flags = fcntl(fd, F_GETFD);
+    if (flags == -1) perror("fcntl GETFD");
+    else {
+        printf("FD flags for %s: 0x%x\n", fname, flags);
+    }
+
+    /* Set close-on-exec bit */
+    if (fcntl(fd, F_SETFD, flags | FD_CLOEXEC) == -1) perror("fcntl SETFD");
+    else printf("Set FD_CLOEXEC on %s\n", fname);
+
+    /* 2) write some bytes, then use lseek to move around */
+    const char *text = "Hello-from-io_syscalls_demo\n";
+    write(fd, text, strlen(text));
+    off_t pos = lseek(fd, 0, SEEK_END);
+    printf("After write, file position = %lld\n", (long long)pos);
+
+    /* seek to beginning, read back */
+    lseek(fd, 0, SEEK_SET);
+    char buf[128];
+    ssize_t r = read(fd, buf, sizeof(buf)-1);
+    if (r >= 0) {
+        buf[r]=0;
+        printf("Read %zd bytes: %s\n", r, buf);
+    } else perror("read");
+
+    close(fd);
+
+    /* 3) stat file */
+    struct stat st;
+    if (stat(fname, &st) == -1) perror("stat");
+    else {
+        printf("File %s: size=%lld, mode=%o, uid=%d, gid=%d\n",
+               fname, (long long)st.st_size, (unsigned)st.st_mode, (int)st.st_uid, (int)st.st_gid);
+    }
+
+    /* 4) opendir/readdir to list directory */
+    DIR *d = opendir(dname);
+    if (!d) { perror("opendir"); return 1; }
+    printf("Directory listing for %s:\n", dname);
+    struct dirent *entry;
+    while ((entry = readdir(d)) != NULL) {
+        printf("  %s (inode=%llu, type=%d)\n", entry->d_name, (unsigned long long)entry->d_ino, entry->d_type);
+    }
+    closedir(d);
+    return 0;
+}

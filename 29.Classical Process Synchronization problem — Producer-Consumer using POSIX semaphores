@@ -1,0 +1,66 @@
+/* prod_cons.c
+   Producer-consumer using POSIX unnamed semaphores and a circular buffer.
+   Compile: gcc -o prod_cons prod_cons.c -pthread
+*/
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+#include <semaphore.h>
+#include <unistd.h>
+
+#define BUFSIZE 5
+int buffer[BUFSIZE];
+int in = 0, out = 0;
+sem_t empty, full;
+pthread_mutex_t mutex;
+
+void *producer(void *arg) {
+    int id = *(int*)arg;
+    for (int i=0;i<10;i++) {
+        sem_wait(&empty);
+        pthread_mutex_lock(&mutex);
+        buffer[in] = id*100 + i;
+        printf("Producer %d produced %d at %d\n", id, buffer[in], in);
+        in = (in + 1) % BUFSIZE;
+        pthread_mutex_unlock(&mutex);
+        sem_post(&full);
+        usleep(100000);
+    }
+    pthread_exit(NULL);
+}
+
+void *consumer(void *arg) {
+    (void)arg;
+    for (int i=0;i<20;i++) {
+        sem_wait(&full);
+        pthread_mutex_lock(&mutex);
+        int val = buffer[out];
+        printf("Consumer consumed %d from %d\n", val, out);
+        out = (out + 1) % BUFSIZE;
+        pthread_mutex_unlock(&mutex);
+        sem_post(&empty);
+        usleep(150000);
+    }
+    pthread_exit(NULL);
+}
+
+int main() {
+    pthread_t p1, p2, c;
+    int id1 = 1, id2 = 2;
+    sem_init(&empty, 0, BUFSIZE);
+    sem_init(&full, 0, 0);
+    pthread_mutex_init(&mutex, NULL);
+
+    pthread_create(&p1, NULL, producer, &id1);
+    pthread_create(&p2, NULL, producer, &id2);
+    pthread_create(&c, NULL, consumer, NULL);
+
+    pthread_join(p1, NULL);
+    pthread_join(p2, NULL);
+    pthread_join(c, NULL);
+
+    sem_destroy(&empty);
+    sem_destroy(&full);
+    pthread_mutex_destroy(&mutex);
+    return 0;
+}
